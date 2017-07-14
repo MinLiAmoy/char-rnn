@@ -61,7 +61,7 @@ function CharSplitLMMinibatchLoader.create(data_dir, batch_size, seq_length, spl
     self.batch_size = batch_size
     self.seq_length = seq_length
 
-    local ydata = data:clone()
+    local ydata = data:clone()    -- ML: ydata, right shift a char abtain text to be predicted
     ydata:sub(1,-2):copy(data:sub(2,-1))
     ydata[-1] = data[1]   -- ML: the first element of data is the last element of ydata
     self.x_batches = data:view(batch_size, -1):split(seq_length, 2)  -- #rows = #batches
@@ -101,7 +101,7 @@ end  --ML:done
 function CharSplitLMMinibatchLoader:reset_batch_pointer(split_index, batch_index)
     batch_index = batch_index or 0
     self.batch_ix[split_index] = batch_index
-end
+end -- ML:done
 
 function CharSplitLMMinibatchLoader:next_batch(split_index)
     if self.split_sizes[split_index] == 0 then
@@ -117,8 +117,8 @@ function CharSplitLMMinibatchLoader:next_batch(split_index)
     end
     -- pull out the correct next batch
     local ix = self.batch_ix[split_index]
-    if split_index == 2 then ix = ix + self.ntrain end -- offset by train set size
-    if split_index == 3 then ix = ix + self.ntrain + self.nval end -- offset by train + val
+    if split_index == 2 then ix = ix + self.ntrain end -- vali batches index offset by train set size
+    if split_index == 3 then ix = ix + self.ntrain + self.nval end -- test batches index offset by train + val
     return self.x_batches[ix], self.y_batches[ix]
 end
 

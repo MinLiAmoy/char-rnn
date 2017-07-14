@@ -151,7 +151,7 @@ else
     elseif opt.model == 'rnn' then
         protos.rnn = RNN.rnn(vocab_size, opt.rnn_size, opt.num_layers, opt.dropout)
     end
-    protos.criterion = nn.ClassNLLCriterion()
+    protos.criterion = nn.ClassNLLCriterion()  --ML: nagative log likelihood(NLL) criterion
 end
 
 -- the initial state of the cell/hidden states
@@ -162,7 +162,7 @@ for L=1,opt.num_layers do
     if opt.gpuid >=0 and opt.opencl == 1 then h_init = h_init:cl() end
     table.insert(init_state, h_init:clone())
     if opt.model == 'lstm' then
-        table.insert(init_state, h_init:clone())
+        table.insert(init_state, h_init:clone())   --ML: due to c[L](another hidden states)
     end
 end
 
@@ -188,7 +188,7 @@ if opt.model == 'lstm' then
             if node.data.annotations.name == "i2h_" .. layer_idx then
                 print('setting forget gate biases to 1 in LSTM layer ' .. layer_idx)
                 -- the gates are, in order, i,f,o,g, so f is the 2nd block of weights
-                node.data.module.bias[{{opt.rnn_size+1, 2*opt.rnn_size}}]:fill(1.0)
+                node.data.module.bias[{{opt.rnn_size+1, 2*opt.rnn_size}}]:fill(1.0)  --ML: very tricky, avoid of gradient diminising
             end
         end
     end
@@ -216,17 +216,18 @@ function prepro(x,y)
         y = y:cl()
     end
     return x,y
-end
+end  -- ML:done, transpose equals T!
 
 -- evaluate the loss over an entire split
-function eval_split(split_index, max_batches)
+function eval_split(split_index, max_batches)  -- ML: evaluate all batches in a split without optimatizion
     print('evaluating loss over split index ' .. split_index)
     local n = loader.split_sizes[split_index]
     if max_batches ~= nil then n = math.min(max_batches, n) end
 
     loader:reset_batch_pointer(split_index) -- move batch iteration pointer for this split to front
+    -- ML: batch_ix is a pointer to indicate where the batch calculate in a split(train, vali, test)
     local loss = 0
-    local rnn_state = {[0] = init_state}
+    local rnn_state = {[0] = init_state} --ML: use rnn-state to store all rnn states in a sequence
     
     for i = 1,n do -- iterate over batches in the split
         -- fetch a batch
@@ -234,7 +235,7 @@ function eval_split(split_index, max_batches)
         x,y = prepro(x,y)
         -- forward pass
         for t=1,opt.seq_length do
-            clones.rnn[t]:evaluate() -- for dropout proper functioning
+            clones.rnn[t]:evaluate() -- for dropout proper functioning      -- ML: something like flags
             local lst = clones.rnn[t]:forward{x[t], unpack(rnn_state[t-1])}
             rnn_state[t] = {}
             for i=1,#init_state do table.insert(rnn_state[t], lst[i]) end
@@ -280,7 +281,7 @@ function feval(x)
     for t=opt.seq_length,1,-1 do
         -- backprop through loss, and softmax/linear
         local doutput_t = clones.criterion[t]:backward(predictions[t], y[t])
-        table.insert(drnn_state[t], doutput_t)
+        table.insert(drnn_state[t], doutput_t)  
         local dlst = clones.rnn[t]:backward({x[t], unpack(rnn_state[t-1])}, drnn_state[t])
         drnn_state[t-1] = {}
         for k,v in pairs(dlst) do
