@@ -59,7 +59,7 @@ function LSTM.lstm(input_size, rnn_size, n, dropout)
   local logsoft = nn.LogSoftMax()(proj)
   table.insert(outputs, logsoft)
 
-  return nn.gModule(inputs, outputs)    --ML: the entire graph has been built
+  return nn.gModule(inputs, outputs)    --ML: the entire graph has been built and transforms to modules
 end
 
 return LSTM
