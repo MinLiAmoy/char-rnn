@@ -63,7 +63,7 @@ function CharSplitLMMinibatchLoader.create(data_dir, batch_size, seq_length, spl
 
     local ydata = data:clone()
     ydata:sub(1,-2):copy(data:sub(2,-1))
-    ydata[-1] = data[1]
+    ydata[-1] = data[1]   -- ML: the first element of data is the last element of ydata
     self.x_batches = data:view(batch_size, -1):split(seq_length, 2)  -- #rows = #batches
     self.nbatches = #self.x_batches
     self.y_batches = ydata:view(batch_size, -1):split(seq_length, 2)  -- #rows = #batches
@@ -96,7 +96,7 @@ function CharSplitLMMinibatchLoader.create(data_dir, batch_size, seq_length, spl
     print(string.format('data load done. Number of data batches in train: %d, val: %d, test: %d', self.ntrain, self.nval, self.ntest))
     collectgarbage()
     return self
-end
+end  --ML:done
 
 function CharSplitLMMinibatchLoader:reset_batch_pointer(split_index, batch_index)
     batch_index = batch_index or 0
@@ -138,7 +138,7 @@ function CharSplitLMMinibatchLoader.text_to_tensor(in_textfile, out_vocabfile, o
     local unordered = {}
     rawdata = f:read(cache_len)
     repeat
-        for char in rawdata:gmatch'.' do
+        for char in rawdata:gmatch'.' do  -- ML: a little tricky
             if not unordered[char] then unordered[char] = true end
         end
         tot_len = tot_len + #rawdata
@@ -174,7 +174,7 @@ function CharSplitLMMinibatchLoader.text_to_tensor(in_textfile, out_vocabfile, o
     torch.save(out_vocabfile, vocab_mapping)
     print('saving ' .. out_tensorfile)
     torch.save(out_tensorfile, data)
-end
+end  --ML:done
 
 return CharSplitLMMinibatchLoader
 

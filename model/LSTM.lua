@@ -7,7 +7,7 @@ function LSTM.lstm(input_size, rnn_size, n, dropout)
   local inputs = {}
   table.insert(inputs, nn.Identity()()) -- x
   for L = 1,n do
-    table.insert(inputs, nn.Identity()()) -- prev_c[L]
+    table.insert(inputs, nn.Identity()()) -- prev_c[L]   -- ML:have multilayers!!!
     table.insert(inputs, nn.Identity()()) -- prev_h[L]
   end
 
@@ -19,19 +19,20 @@ function LSTM.lstm(input_size, rnn_size, n, dropout)
     local prev_c = inputs[L*2]
     -- the input to this layer
     if L == 1 then 
-      x = OneHot(input_size)(inputs[1])
+      x = OneHot(input_size)(inputs[1]) --ML: Onehot()is a Module isntance and input_size defines the size. 
+                                        --ML: and inputs[1] defines the input and build a graph node.
       input_size_L = input_size
     else 
-      x = outputs[(L-1)*2] 
+      x = outputs[(L-1)*2]    -- if not input layer, than x equals h[L-1]
       if dropout > 0 then x = nn.Dropout(dropout)(x) end -- apply dropout, if any
       input_size_L = rnn_size
     end
     -- evaluate the input sums at once for efficiency
     local i2h = nn.Linear(input_size_L, 4 * rnn_size)(x):annotate{name='i2h_'..L}
     local h2h = nn.Linear(rnn_size, 4 * rnn_size)(prev_h):annotate{name='h2h_'..L}
-    local all_input_sums = nn.CAddTable()({i2h, h2h})
+    local all_input_sums = nn.CAddTable()({i2h, h2h})  --ML: three operations!!! output 4rnn_size*1
 
-    local reshaped = nn.Reshape(4, rnn_size)(all_input_sums)
+    local reshaped = nn.Reshape(4, rnn_size)(all_input_sums)  --ML: now dim=4*rnn_size
     local n1, n2, n3, n4 = nn.SplitTable(2)(reshaped):split(4)
     -- decode the gates
     local in_gate = nn.Sigmoid()(n1)
@@ -48,7 +49,7 @@ function LSTM.lstm(input_size, rnn_size, n, dropout)
     local next_h = nn.CMulTable()({out_gate, nn.Tanh()(next_c)})
     
     table.insert(outputs, next_c)
-    table.insert(outputs, next_h)
+    table.insert(outputs, next_h)  --ML: ouotput table!!!
   end
 
   -- set up the decoder
@@ -58,7 +59,7 @@ function LSTM.lstm(input_size, rnn_size, n, dropout)
   local logsoft = nn.LogSoftMax()(proj)
   table.insert(outputs, logsoft)
 
-  return nn.gModule(inputs, outputs)
+  return nn.gModule(inputs, outputs)    --ML: the entire graph has been built
 end
 
 return LSTM
