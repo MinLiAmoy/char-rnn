@@ -146,6 +146,8 @@ else
     protos = {}
     if opt.model == 'lstm' then
         protos.rnn = LSTM.lstm(vocab_size, opt.rnn_size, opt.num_layers, opt.dropout)
+        local q = require 'quantize'   -- ML
+        protos.rnn:quantize(q.fixed(1,4)) --ML
     elseif opt.model == 'gru' then
         protos.rnn = GRU.gru(vocab_size, opt.rnn_size, opt.num_layers, opt.dropout)
     elseif opt.model == 'rnn' then
@@ -249,7 +251,7 @@ function eval_split(split_index, max_batches)  -- ML: evaluate all batches in a 
 
     loss = loss / opt.seq_length / n
     return loss
-end
+end   --ML: figure out how to calculate the accuracy when test the validation split
 
 -- do fwd/bwd and return loss, grad_params
 local init_state_global = clone_list(init_state)
@@ -313,6 +315,8 @@ for i = 1, iterations do
 
     local timer = torch.Timer()
     local _, loss = optim.rmsprop(feval, params, optim_state)
+    local q = require 'quantize' -- ML
+    protos.rnn:quantize(q.fixed(1,4)) --ML
     if opt.accurate_gpu_timing == 1 and opt.gpuid >= 0 then
         --[[
         Note on timing: The reported time can be off because the GPU is invoked async. If one
