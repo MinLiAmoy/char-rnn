@@ -315,8 +315,8 @@ for i = 1, iterations do
 
     local timer = torch.Timer()
     local _, loss = optim.rmsprop(feval, params, optim_state)
-    local q = require 'quantize' -- ML
-    protos.rnn:quantize(q.fixed(1,4)) --ML
+    -- local q = require 'quantize' -- ML
+    -- protos.rnn:quantize(q.fixed(1,4)) --ML
     if opt.accurate_gpu_timing == 1 and opt.gpuid >= 0 then
         --[[
         Note on timing: The reported time can be off because the GPU is invoked async. If one
